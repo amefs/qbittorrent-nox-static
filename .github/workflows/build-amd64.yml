@@ -1,0 +1,36 @@
+# The workflow to build binary with Actions
+
+name: Build qbittorrent-nox amd64
+
+# Controls when the action will run. 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: amd64/alpine:latest
+    steps:
+      - uses: actions/checkout@master
+      - name: run build
+        run: |
+          apk update
+          apk add bash curl
+          bash ./qbittorrent-static.sh all -i --lt "${{ secrets.LT_VERSION }}" --qt "${{ secrets.QBIT_VERSION }}" ${{ secrets.EXTRA_ARGS }} -v
+          cp qb-build/completed/qbittorrent-nox ./qbittorrent-nox.amd64
+
+      - name: archive binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: qbittorrent-nox_lt_${{ secrets.LT_VERSION }}_qb_${{ secrets.QBIT_VERSION }}
+          path: qbittorrent-nox.amd64
+
+      - name: archive logs
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: qb-build/logs 
+
+      - name: result
+        run: echo "This job's status is ${{ job.status }}."
