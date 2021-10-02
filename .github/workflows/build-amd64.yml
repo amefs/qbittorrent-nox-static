@@ -17,7 +17,7 @@ jobs:
         run: |
           apk update
           apk add bash curl
-          bash ./qbittorrent-static.sh all -i --lt "${{ secrets.LT_VERSION }}" --qt "${{ secrets.QBIT_VERSION }}" ${{ secrets.EXTRA_ARGS }} -v
+          bash ./qbittorrent-static.sh all --cmake -i --lt "${{ secrets.LT_VERSION }}" --qt "${{ secrets.QBIT_VERSION }}" ${{ secrets.EXTRA_ARGS }} -v
           cp qb-build/completed/qbittorrent-nox ./qbittorrent-nox.amd64
 
       - name: archive binary

@@ -16,7 +16,7 @@ jobs:
       - name: run build
         uses: docker://arm64v8/alpine
         with:
-          args: /bin/ash -c "apk update && apk add bash && bash ./qbittorrent-static.sh all -i --lt \"${{ secrets.LT_VERSION }}\" --qt \"${{ secrets.QBIT_VERSION }}\" ${{ secrets.EXTRA_ARGS }} -v && cp qb-build/completed/qbittorrent-nox ./qbittorrent-nox.arm64"
+          args: /bin/ash -c "apk update && apk add bash && bash ./qbittorrent-static.sh all --cmake -i --lt \"${{ secrets.LT_VERSION }}\" --qt \"${{ secrets.QBIT_VERSION }}\" ${{ secrets.EXTRA_ARGS }} -v && cp qb-build/completed/qbittorrent-nox ./qbittorrent-nox.arm64"
 
       - name: archive binary
         uses: actions/upload-artifact@v2
