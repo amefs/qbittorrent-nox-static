@@ -27,7 +27,7 @@ qb_skip_qtbase qb_skip_qttools patch_repo_check patch_repo info_verbose cstandar
 delete=() # modules listed in this array will be removed from teh default list of modules, changing the behaviour of all or install
 #####################################################################################################################################################
 # Color me up Scotty - define some color values to use as variables in the scripts.
-#####################################################################################################################################################
+##################################################################
 cr="\e[31m" && clr="\e[91m" # [c]olor[r]ed     && [c]olor[l]ight[r]ed
 cg="\e[32m" && clg="\e[92m" # [c]olor[g]reen   && [c]olor[l]ight[g]reen
 cy="\e[33m" && cly="\e[93m" # [c]olor[y]ellow  && [c]olor[l]ight[y]ellow
@@ -37,9 +37,19 @@ cc="\e[36m" && clc="\e[96m" # [c]olor[c]yan    && [c]olor[l]ight[c]yan
 #
 tb="\e[1m" && td="\e[2m" && tu="\e[4m" && tn="\n" # [t]ext[b]old && [t]ext[d]im && [t]ext[u]nderlined && [t]ext[n]ewline
 #
-cdef="\e[39m" # [c]olor[default]
+utick="\e[32m\U2714\e[0m" && uplus="\e[36m\U002b\e[0m" && ucross="\e[31m\U00D7\e[0m" # [u]nicode][tick] [u]nicode][plus] [u]nicode][cross]
+#
+urc="\e[31m\U25cf\e[0m" && ulrc="\e[91m\U25cf\e[0m"    # [u]nicode[r]ed[c]ircle     && [u]nicode[l]ight[r]ed[c]ircle
+ugc="\e[32m\U25cf\e[0m" && ulgc="\e[92m\U25cf\e[0m"    # [u]nicode[g]reen[c]ircle   && [u]nicode[l]ight[g]reen[c]ircle
+uyc="\e[33m\U25cf\e[0m" && ulyc="\e[93m\U25cf\e[0m"    # [u]nicode[y]ellow[c]ircle  && [u]nicode[l]ight[y]ellow[c]ircle
+ubc="\e[34m\U25cf\e[0m" && ulbc="\e[94m\U25cf\e[0m"    # [u]nicode[b]lue[c]ircle    && [u]nicode[l]ight[b]lue[c]ircle
+umc="\e[35m\U25cf\e[0m" && ulmc="\e[95m\U25cf\e[0m"    # [u]nicode[m]agenta[c]ircle && [u]nicode[l]ight[m]agenta[c]ircle
+ucc="\e[36m\U25cf\e[0m" && ulcc="\e[96m\U25cf\e[0m"    # [u]nicode[c]yan[c]ircle    && [u]nicode[l]ight[c]yan[c]ircle
+ugrc="\e[37m\U25cf\e[0m" && ulgrcc="\e[97m\U25cf\e[0m" # [u]nicode[gr]ey[c]ircle    && [u]nicode[l]ight[gr]ey[c]ircle
+#
+cdef="\e[39m" # [c]olor[def]ault
 cend="\e[0m"  # [c]olor[end]
-#####################################################################################################################################################
+#######################################################################################################################################################
 # CHeck we are on a supported OS and release.
 #####################################################################################################################################################
 function checkos() {
@@ -168,16 +178,16 @@ function set_build_directory() {
 #####################################################################################################################################################
 # This function sets some compiler flags globally - b2 settings are set in the ~/user-config.jam  set in the installation_modules function
 #####################################################################################################################################################
-function custom_flags_set() {
-    CXXFLAGS="${optimize/*/$optimize }-std=${standard}"
-    CPPFLAGS="${optimize/*/$optimize }--static -static -I${include_dir}"
-    LDFLAGS="${optimize/*/$optimize }--static -static -Wl,--no-as-needed -L${lib_dir} -lpthread -pthread"
+custom_flags_set() {
+	CXXFLAGS="${optimize/*/$optimize }-std=${cxx_standard} -static -w ${qb_strip_flags} -I${include_dir}"
+	CPPFLAGS="${optimize/*/$optimize }-static -w ${qb_strip_flags} -I${include_dir}"
+	LDFLAGS="${optimize/*/$optimize }-static -Wl,--no-as-needed -L${lib_dir} -lpthread -pthread"
 }
 #
-function custom_flags_reset() {
-    CXXFLAGS="${optimize/*/$optimize }-std=${standard}"
-    CPPFLAGS=""
-    LDFLAGS=""
+custom_flags_reset() {
+	CXXFLAGS="${optimize/*/$optimize }-std=${cxx_standard}"
+	CPPFLAGS="${optimize/*/$optimize }"
+	LDFLAGS=""
 }
 #####################################################################################################################################################
 # This function sets some default values we use but whose values can be overridden by certain flags
@@ -185,47 +195,53 @@ function custom_flags_reset() {
 set_default_values() {
     DEBIAN_FRONTEND="noninteractive" TZ="GMT" # For docker deploys to not get prompted to set the timezone.
     #
-    glibc_version='2.31'
+    qb_build_tool="${qb_build_tool:-}"
     #
-    qb_patches_url="" # Provide a git username and repo in this format - username/repo" - In this repo the structure needs to be like this /patches/libtorrent/1.2.11/patch and/or /patches/qbittorrent/4.3.1/patch and you patch file will be automatically fetched and loadded for those matching tags.
+    glibc_version="${glibc_version:-2.31}"
     #
-    libtorrent_version='1.2' # Set this here so it is easy to see and change
+    qb_patches_url="${qb_patches_url:-}" # Provide a git username and repo in this format - username/repo" - In this repo the structure needs to be like this /patches/libtorrent/1.2.11/patch and/or /patches/qbittorrent/4.3.1/patch and you patch file will be automatically fetched and loadded for those matching tags.
     #
-    qt_version='5.15' # Set this here so it is easy to see and change
+    libtorrent_version="${libtorrent_version:-1.2}" # Set this here so it is easy to see and change
+    #
+    qt_version=${qt_version:-5.15} # Set this here so it is easy to see and change
     #
     qb_python_version="3" # we are only using python3 but it's easier to just change this if we need to.
     #
-    if [[ -z ${cstandard} ]]; then
-        cstandard="17"
-    fi
-    standard="c++${cstandard}" # Set the cxx standard. You need to set c++14 for older version sof some apps, like qt 5.12
+    standard=${standard:-17} && cpp_standard="c${standard}" && cxx_standard="c++${standard}" # Set the cxx standard. You need to set c++14 for older version sof some apps, like qt 5.12
     # Define our list of available modules in an array.
-    qb_modules=("all" "install" "bison" "gawk" "glibc" "zlib" "icu" "openssl" "boost" "libtorrent" "qtbase" "qttools" "qbittorrent")
+    qb_modules=("all" "install" "libexecinfo" "bison" "gawk" "glibc" "zlib" "iconv" "icu" "openssl" "boost" "libtorrent" "qtbase" "qttools" "qbittorrent")
     #
     if [[ "${DISTRO}" =~ ^(alpine)$ ]]; then # if alpines delete modules we don't use and set the required packages array
         delete+=("bison" "gawk" "glibc")
         qb_basic_required_pkgs=("bash" "bash-completion" "curl" "git")
-        qb_required_pkgs=("build-base" "pkgconf" "autoconf" "automake" "libtool" "perl" "python${qb_python_version}" "python${qb_python_version}-dev" "py${qb_python_version}-numpy" "py${qb_python_version}-numpy-dev" "linux-headers")
+        qb_required_pkgs=("build-base" "pkgconf" "autoconf" "automake" "libtool" "perl" "python${qb_python_version}" "python${qb_python_version}-dev" "py${qb_python_version}-numpy" "py${qb_python_version}-numpy-dev" "linux-headers" "cmake" "re2c")
     fi
     #
     if [[ "${DISTRO}" =~ ^(debian|ubuntu)$ ]]; then # if debian based set the required packages array
+        delete+=("libexecinfo")
         qb_basic_required_pkgs=("curl" "git")
-        qb_required_pkgs=("build-essential" "pkg-config" "automake" "libtool" "perl" "python${qb_python_version}" "python${qb_python_version}-dev" "python${qb_python_version}-numpy")
+        qb_required_pkgs=("build-essential" "pkg-config" "automake" "libtool" "perl" "python${qb_python_version}" "python${qb_python_version}-dev" "python${qb_python_version}-numpy" "unzip")
     fi
     #
     if [[ "${1}" != 'install' ]]; then # remove this module by default unless provided as a first argument to the script.
         delete+=("install")
     fi
     #
-    if [[ "${qb_skip_icu}" != 'no' ]]; then # skip icu by default unless the -i flag is used
-        delete+=("icu")
-    fi
+	if [[ "${qb_build_tool}" != 'cmake' ]]; then
+		delete+=("cmake" "re2c")
+	else
+		[[ "${qb_skip_icu}" != 'no' ]] && delete+=("icu")
+	fi
+	#
+    arch="$(uname -m)"
     #
     qb_working_dir="$(printf "%s" "$(pwd <(dirname "${0}"))")" # Get the full path to the scripts location to use with setting some path related variables.
     qb_working_dir_short="${qb_working_dir/$HOME/\~}"          # echo the working dir but replace the $HOME path with ~
     #
     qb_install_dir="${qb_working_dir}/qb-build"       # install relative to the script location.
     qb_install_dir_short="${qb_install_dir/$HOME/\~}" # echo the install dir but replace the $HOME path with ~
+    #
+    qb_local_paths="$PATH" # get the local users $PATH before we isolate the script by setting HOME to the install dir in the set_build_directory function.
 }
 #####################################################################################################################################################
 # This function will check for a list of defined dependencies from the qb_required_pkgs array. Apps like python3 and python2 are dynamically set
@@ -449,16 +465,25 @@ function check_dependencies() {
 #####################################################################################################################################################
 set_module_urls() {
     echo -e "${cm}➜ Initialing upstream repo${cend}"
+	if [[ "${DISTRO}" =~ ^(alpine)$ ]]; then
+		libexecinfo_dev_url="${CDN_URL}/${arch}/$(apk info libexecinfo-dev | awk '{print $1}' | head -n 1).apk"
+		libexecinfo_static_url="${CDN_URL}/${arch}/$(apk info libexecinfo-static | awk '{print $1}' | head -n 1).apk"
+	fi
     bison_url="http://ftpmirror.gnu.org/gnu/bison/$(grep -Eo 'bison-([0-9]{1,3}[.]?)([0-9]{1,3}[.]?)([0-9]{1,3}?)\.tar.gz' <(curl http://ftpmirror.gnu.org/gnu/bison/) | sort -V | tail -1)"
     #
     gawk_url="http://ftpmirror.gnu.org/gnu/gawk/$(grep -Eo 'gawk-([0-9]{1,3}[.]?)([0-9]{1,3}[.]?)([0-9]{1,3}?)\.tar.gz' <(curl http://ftpmirror.gnu.org/gnu/gawk/) | sort -V | tail -1)"
     #
     # glibc_url="http://ftpmirror.gnu.org/gnu/libc/$(grep -Eo 'glibc-([0-9]{1,3}[.]?)([0-9]{1,3}[.]?)([0-9]{1,3}?)\.tar.gz' <(curl http://ftpmirror.gnu.org/gnu/libc/) | sort -V | tail -1)"
+    cmake_github_tag="$(git_git ls-remote -q -t --refs https://github.com/Kitware/CMake.git | awk '/v/{sub("refs/tags/", "");sub("(.*)(-[^0-9].*)(.*)", ""); print $2 }' | awk '!/^$/' | sort -rV | head -n 1)"
+	cmake_version="${cmake_github_tag#v}"
+	ninja_github_tag="$(git_git ls-remote -q -t --refs https://github.com/ninja-build/ninja.git | awk '/v/{sub("refs/tags/", "");sub("(.*)(-[^0-9].*)(.*)", ""); print $2 }' | awk '!/^$/' | sort -rV | head -n 1)"
+	ninja_version="${ninja_github_tag#v}"
     glibc_url="http://ftpmirror.gnu.org/gnu/libc/glibc-${glibc_version}.tar.gz"
     #
     zlib_github_tag="$(grep -Eom1 'v1.2.([0-9]{1,2})' <(curl https://github.com/madler/zlib/releases))"
     zlib_url="https://github.com/madler/zlib/archive/${zlib_github_tag}.tar.gz"
     #
+    iconv_url="http://ftpmirror.gnu.org/gnu/libiconv/$(grep -Eo 'libiconv-([0-9]{1,3}[.]?)([0-9]{1,3}[.]?)([0-9]{1,3}?)\.tar.gz' <(curl http://ftpmirror.gnu.org/gnu/libiconv/) | sort -V | tail -1)"
     icu_url="$(grep -Eom1 'ht(.*)icu4c(.*)-src.tgz' <(curl https://api.github.com/repos/unicode-org/icu/releases/latest))"
     #
     openssl_github_tag="$(grep -Eom1 'OpenSSL_1_1_([0-9][a-z])' <(curl "https://github.com/openssl/openssl/releases"))"
@@ -473,10 +498,11 @@ set_module_urls() {
     qtbase_tags="$(git_git ls-remote -t --refs https://github.com/qt/qtbase.git | awk '{sub("refs/tags/", "");sub("(.*)(v6|rc|alpha|beta|-)(.*)", ""); print $2 }' | awk '!/^$/' | sort -rV)"
     qttools_tag="$(git_git ls-remote -t --refs https://github.com/qt/qttools.git | awk '{sub("refs/tags/", "");sub("(.*)(v6|rc|alpha|beta|-)(.*)", ""); print $2 }' | awk '!/^$/' | sort -rV)"
     #
-    qtbase_github_tag="$(grep -Eom1 "v${qt_version}.([0-9]{1,2})" <<< "${qtbase_tags}")"
+    qt_github_tag_list="$(git_git ls-remote -q -t --refs https://github.com/qt/qtbase.git | awk '{sub("refs/tags/", "");sub("(.*)(-[^0-9].*)(.*)", ""); print $2 }' | awk '!/^$/' | sort -rV)"
+    qtbase_github_tag="$(grep -Eom1 "v${qt_version}.([0-9]{1,2})" <<< "${qt_github_tag_list}")"
     qtbase_github_url="https://github.com/qt/qtbase.git"
-    qttools_github_tag="$(grep -Eom1 "v${qt_version}.([0-9]{1,2})" <<< "${qttools_tag}")"
-    qttools_github_url="https://github.com/qt/qttools.git"
+	qttools_github_tag="$(grep -Eom1 "v${qt_version}.([0-9]{1,2})" <<< "${qt_github_tag_list}")"
+	qttools_github_url="https://github.com/qt/qttools.git"
     #
     libtorrent_github_url="https://github.com/arvidn/libtorrent.git"
     libtorrent_github_tag_default="$(grep -Eom1 "v${libtorrent_version}.([0-9]{1,2})" <(curl "https://github.com/arvidn/libtorrent/tags"))"
@@ -838,7 +864,62 @@ function install_qbittorrent() {
         exit
     fi
 }
-#####################################################################################################################################################
+#####################################################################################
+##################################################################
+# cmake installation
+#######################################################################################################################################################
+_cmake() {
+	if [[ "${qb_build_tool}" == 'cmake' ]]; then
+		echo -e "${tn} ${ulbc}${clr} Checking if cmake and ninja need to be installed${cend}"
+		mkdir -p "${qb_install_dir}/bin"
+		_cd "${qb_install_dir}"
+		#
+		if [[ "${DISTRO}" =~ ^(debian|ubuntu)$ ]]; then
+			if [[ "$(cmake --version 2> /dev/null | awk 'NR==1{print $3}')" != "${cmake_github_tag#v}" ]]; then
+				curl "https://github.com/Kitware/CMake/releases/download/v${cmake_version}/cmake-${cmake_version}-linux-x86_64.sh" -o "${qb_install_dir}/cmake.sh"
+				if ! bash "${qb_install_dir}/cmake.sh" --skip-license --exclude-subdir &> /dev/null; then
+					post_command "cmake installation"
+				fi
+			fi
+			#
+			if [[ "$("${qb_install_dir}/bin/ninja" --version 2> /dev/null)" != "${ninja_github_tag#v}" ]]; then
+				curl "https://github.com/ninja-build/ninja/releases/download/v${ninja_version}/ninja-linux.zip" -o "${qb_install_dir}/ninja-linux.zip"
+				if unzip -q -o "${qb_install_dir}/ninja-linux.zip" -d "${qb_install_dir}/bin" &> /dev/null; then
+					post_command "ninja installation"
+				fi
+				_cd "${qb_install_dir}" && rm -f "${qb_install_dir}/cmake.sh" "${qb_install_dir}/ninja-linux.zip"
+			fi
+		fi
+		#
+		if [[ "${DISTRO}" =~ ^(alpine)$ ]]; then
+			if [[ "$("${qb_install_dir}/bin/ninja" --version 2> /dev/null)" != "${ninja_github_tag#v}" ]]; then
+				download_folder ninja https://github.com/ninja-build/ninja.git
+				python3 configure.py --bootstrap --host=linux
+				cp -f "${qb_install_dir}/ninja/ninja" "${qb_install_dir}/bin/ninja"
+				_cd "${qb_install_dir}" && rm -rf "${qb_install_dir}/ninja"
+			fi
+		fi
+		#
+		echo -e "${tn} ${ugc}${clr} cmake and ninja are installed and ready to use${cend}"
+	fi
+}
+#######################################################################################################################################################
+# static lib link fix: check for *.so and *.a versions of a lib in the $lib_dir and change the *.so link to point to the statric lib e.g. libdl.a
+#######################################################################################################################################################
+_fix_static_links() {
+	log_name="$1"
+	readarray -t library_list < <(find "${lib_dir}" -maxdepth 1 -exec bash -c 'basename "$0" ".${0##*.}"' {} \; | sort | uniq -d)
+	for file in "${library_list[@]}"; do
+		if [[ "$(readlink "${lib_dir}/${file}.so")" != "${file}.a" ]]; then
+			ln -fsn "${file}.a" "${lib_dir}/${file}.so"
+			echo "${lib_dir}${file}.so changed to point to ${file}.a" >> "${qb_install_dir}/logs/${log_name}-fix-static-links.log.txt"
+		fi
+	done
+	return
+}
+#####################################################################################
+##################################################################
+################################################################
 # wtf is wrong now?
 #####################################################################################################################################################
 function _cmd() {
@@ -847,7 +928,20 @@ function _cmd() {
         exit 1
     fi
 }
-#####################################################################################################################################################
+################################################################################################
+########################################################
+# build command test
+#######################################################################################################################################################
+post_command() {
+	outcome="${PIPESTATUS[0]}"
+	[[ -n "${1}" ]] && command_type="${1}"
+	if [[ ${outcome} -gt '0' ]]; then
+		echo -e "${tn} ${urc} ${clr}Error: The ${command_type} command produced an exit code greater than 0 - Check the logs${cend}${tn}"
+		exit "${outcome}"
+	fi
+}
+###############################################################################################
+#####################################################
 # verify if repo exist
 #####################################################################################################################################################
 function verify_repo() {
@@ -866,6 +960,10 @@ function verify_repo() {
     if [[ "${qbit_tag_check}" = 'yes' ]]; then
         qbittorrent_github_tag="$(git "${qbittorrent_github_url}" -t "${qbit_tag}")"
         test_git_ouput "${qbittorrent_github_tag}" "${qbit_tag}" "qbittorrent"
+    fi
+    if [[ "${qt_version_check}" = 'yes' ]]; then
+        qtbase_github_tag="$(git "${qtbase_github_url}" -t "${qt_version}")"
+        test_git_ouput "${qtbase_github_tag}" "${qt_version}" "qtbase"
     fi
     if [[ "${patch_repo_check}" = 'yes' ]]; then
         if [[ "$(curl "https://github.com/${patch_repo}")" != 'error_url' ]]; then
@@ -910,6 +1008,24 @@ spinner() {
 # Functions part 4: building scripts
 #####################################################################################################################################################
 function _build() {
+#######################################################################################################################################################
+# libexecinfo installation
+#######################################################################################################################################################
+    application_name libexecinfo
+    #
+    if [[ "${!app_name_skip:-yes}" = 'no' ]] || [[ "${1}" = "${app_name}" ]]; then
+        echo -e "${tn} ${uplus}${cg} Installing ${app_name}${cend}"
+        #
+        curl "${libexecinfo_dev_url}" -o "${qb_install_dir}/libexecinfo_dev_${arch}.apk"
+        curl "${libexecinfo_static_url}" -o "${qb_install_dir}/libexecinfo_static_${arch}.apk"
+        #
+        tar xf "${qb_install_dir}/libexecinfo_dev_${arch}.apk" --strip-components=1 -C "${qb_install_dir}"
+        tar xf "${qb_install_dir}/libexecinfo_static_${arch}.apk" --strip-components=1 -C "${qb_install_dir}"
+        #
+        _fix_static_links "${app_name}"
+    else
+        application_skip
+    fi
 #####################################################################################################################################################
 # bison installation
 #####################################################################################################################################################
@@ -964,6 +1080,8 @@ function _build() {
             echo
         fi
         #
+        _fix_static_links "${app_name}"
+        #
         delete_function "${app_name}"
     else
         application_skip
@@ -995,6 +1113,8 @@ function _build() {
             echo
         fi
         #
+        _fix_static_links "${app_name}"
+        #
         delete_function "${app_name}"
     else
         application_skip
@@ -1024,10 +1144,45 @@ function _build() {
             echo
         fi
         #
+        _fix_static_links "${app_name}"
+        #
         delete_function "${app_name}"
     else
         application_skip
     fi
+#######################################################################################################################################################
+# iconv installation
+#######################################################################################################################################################
+application_name iconv
+#
+if [[ "${!app_name_skip:-yes}" = 'no' || "${1}" = "${app_name}" ]]; then
+	custom_flags_reset
+	download_file "${app_name}" "${!app_url}"
+	#
+    if [[ "${info_verbose}" = 'yes' ]]; then
+        ./configure --prefix="${qb_install_dir}" --disable-shared --enable-static CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+        #
+        make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+        #
+        make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+        #
+        post_command build
+    else
+        ./configure --prefix="${qb_install_dir}" --disable-shared --enable-static CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+        #
+        make -j"$(nproc)" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+        #
+        make install >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+        #
+        post_command build
+    fi
+	#
+	_fix_static_links "${app_name}"
+	#
+	delete_function "${app_name}"
+else
+	application_skip
+fi
 #####################################################################################################################################################
 # ICU installation
 #####################################################################################################################################################
@@ -1038,12 +1193,12 @@ function _build() {
         download_file "${app_name}" "${!app_url}" "/source"
         #
         if [[ "${info_verbose}" = 'yes' ]]; then
-            ./configure --prefix="${qb_install_dir}" --disable-shared --enable-static CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+            ./configure --prefix="${qb_install_dir}" --disable-shared --enable-static  --disable-samples --disable-tests --with-data-packaging=static CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
             make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
             make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
         else
             echo "configuring ${app_name} ... "
-            ./configure --prefix="${qb_install_dir}" --disable-shared --enable-static CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+            ./configure --prefix="${qb_install_dir}" --disable-shared --enable-static  --disable-samples --disable-tests --with-data-packaging=static CXXFLAGS="${CXXFLAGS}" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
             echo
             echo "compiling ${app_name} ... "
             make -j"$(nproc)" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
@@ -1052,6 +1207,8 @@ function _build() {
             make install >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
             echo
         fi
+        #
+        _fix_static_links "${app_name}"
         #
         delete_function "${app_name}"
     else
@@ -1082,6 +1239,8 @@ function _build() {
             echo
         fi
         #
+        _fix_static_links "${app_name}"
+        #
         delete_function "${app_name}"
     else
         application_skip
@@ -1107,11 +1266,23 @@ function _build() {
         fi
         #
         if [[ "${info_verbose}" = 'yes' ]]; then
-            "${qb_install_dir}/boost/bootstrap.sh" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+            if [[ "${qb_build_tool}" != 'cmake' ]]; then
+                "${qb_install_dir}/boost/bootstrap.sh" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+            else
+                echo -e " ${uyc} Skipping b2 as we are using cmake"
+            fi
+            if [[ "${boost_url_status}" =~ (403|404) ]]; then
+                "${qb_install_dir}/boost/b2" headers |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+            fi
         else
-            echo "${app_name} bootstrap ... "
-            "${qb_install_dir}/boost/bootstrap.sh" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-            echo
+            if [[ "${qb_build_tool}" != 'cmake' ]]; then
+                "${qb_install_dir}/boost/bootstrap.sh" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+            else
+                echo -e " ${uyc} Skipping b2 as we are using cmake"
+            fi
+            if [[ "${boost_url_status}" =~ (403|404) ]]; then
+                "${qb_install_dir}/boost/b2" headers >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+            fi
         fi
     else
         application_skip
@@ -1136,12 +1307,57 @@ function _build() {
             BOOST_BUILD_PATH="${qb_install_dir}/boost"
             #
             if [[ "${info_verbose}" = 'yes' ]]; then
-                "${qb_install_dir}/boost/b2" -j"$(nproc)" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd=${cstandard} dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                if [[ "${qb_build_tool}" == 'cmake' ]]; then
+                    cmake -Wno-dev -Wno-deprecated -G Ninja -B build \
+                        -D CMAKE_BUILD_TYPE="Release" \
+                        -D CMAKE_CXX_STANDARD="${standard}" \
+                        -D CMAKE_PREFIX_PATH="${qb_install_dir};${qb_install_dir}/boost" \
+                        -D Boost_NO_BOOST_CMAKE=TRUE \
+                        -D CMAKE_CXX_FLAGS="${CXXFLAGS}" \
+                        -D BUILD_SHARED_LIBS=OFF \
+                        -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    cmake --build build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    #
+                    post_command build
+                    #
+                    cmake --install build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    #
+                else
+                    "${qb_install_dir}/boost/b2" -j"$(nproc)" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd="${standard}" dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                    #
+                    post_command build
+                    #
+                fi
             else
                 echo "compiling ${app_name} ... "
-                "${qb_install_dir}/boost/b2" -j"$(nproc)" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd=${cstandard} dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-                echo
+                if [[ "${qb_build_tool}" == 'cmake' ]]; then
+                    cmake -Wno-dev -Wno-deprecated -G Ninja -B build \
+                        -D CMAKE_BUILD_TYPE="Release" \
+                        -D CMAKE_CXX_STANDARD="${standard}" \
+                        -D CMAKE_PREFIX_PATH="${qb_install_dir};${qb_install_dir}/boost" \
+                        -D Boost_NO_BOOST_CMAKE=TRUE \
+                        -D CMAKE_CXX_FLAGS="${CXXFLAGS}" \
+                        -D BUILD_SHARED_LIBS=OFF \
+                        -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                    echo "compiling ${app_name} ... "
+                    cmake --build build >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                    #
+                    post_command build
+                    #
+                    echo "installing ${app_name} ... "
+                    cmake --install build >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                    #
+                else
+                    echo "configuring ${app_name} ... "
+                    "${qb_install_dir}/boost/b2" -j"$(nproc)" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd="${standard}" dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                    #
+                    echo "compiling ${app_name} ... "
+                    post_command build
+                    #
+                fi
             fi
+            #
+            _fix_static_links "${app_name}"
             #
             delete_function "${app_name}"
         fi
@@ -1157,23 +1373,110 @@ function _build() {
         custom_flags_set
         download_folder "${app_name}" "${!app_github_url}"
         #
-        [[ "${qb_skip_icu}" = 'no' ]] && icu='-icu' || icu='-no-icu'
-        #
         if [[ "${info_verbose}" = 'yes' ]]; then
-            ./configure -prefix "${qb_install_dir}" "${icu}" -opensource -confirm-license -release -openssl-linked -static -c++std ${standard} -qt-pcre -no-iconv -no-feature-glib -no-feature-opengl -no-feature-dbus -no-feature-gui -no-feature-widgets -no-feature-testlib -no-compile-examples -I "${include_dir}" -L "${lib_dir}" QMAKE_LFLAGS="${LDFLAGS}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
-            make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
-            make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+            if [[ "${qb_build_tool}" == 'cmake' && "${qt_version}" =~ ^(6\.[0-9]{1,2})$ ]]; then
+                cmake -Wno-dev -Wno-deprecated -G Ninja -B build \
+                    -D CMAKE_BUILD_TYPE="release" \
+                    -D QT_FEATURE_optimize_full=on -D QT_FEATURE_static=on -D QT_FEATURE_shared=off \
+                    -D QT_FEATURE_gui=off -D QT_FEATURE_openssl_linked=on \
+                    -D QT_FEATURE_dbus=off -D QT_FEATURE_pcre2=on -D QT_FEATURE_widgets=off \
+                    -D QT_FEATURE_testlib=off -D QT_BUILD_EXAMPLES=off -D QT_BUILD_TESTS=off \
+                    -D CMAKE_CXX_STANDARD="${standard}" \
+                    -D CMAKE_PREFIX_PATH="${qb_install_dir}" \
+                    -D CMAKE_CXX_FLAGS="${CXXFLAGS}" \
+                    -D BUILD_SHARED_LIBS=OFF \
+                    -D CMAKE_CXX_STANDARD_LIBRARIES="${lib_dir}/libexecinfo.a" \
+                    -D CMAKE_SKIP_RPATH=on -D CMAKE_SKIP_INSTALL_RPATH=on \
+                    -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                cmake --build build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                #
+                post_command build
+                #
+                cmake --install build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                #
+            elif [[ "${qt_version}" =~ ^(5\.[0-9]{1,2})$ ]]; then
+                if [[ "${qb_skip_icu}" = 'no' ]]; then
+                    icu=("-icu" "-no-iconv" "QMAKE_CXXFLAGS=-w")
+                else
+                    icu=("-no-icu" "-iconv" "QMAKE_CXXFLAGS=-w -fpermissive")
+                fi
+                #
+                # If Alpine, add the QMAKE_LIBS_EXECINFO path so we can build qtbase with no errors whilst linking against libexecinfo
+                [[ "${DISTRO}" =~ ^(alpine)$ ]] && echo "QMAKE_LIBS_EXECINFO     = ${lib_dir}/libexecinfo.a" >> "${qb_install_dir}/${app_name}/mkspecs/common/linux.conf"
+                #
+                # Don't strip by default by disabling these options. We will set it as off by default and use it with a switch
+                echo "CONFIG                 += ${qb_strip_qmake:-nostrip}" >> "${qb_install_dir}/qtbase/mkspecs/common/linux.conf"
+                #
+                ./configure -prefix "${qb_install_dir}" "${icu[@]}" -opensource -confirm-license -release \
+                    -openssl-linked -static -c++std "${standard}" -qt-pcre \
+                    -no-feature-glib -no-feature-opengl -no-feature-dbus -no-feature-gui -no-feature-widgets -no-feature-testlib -no-compile-examples \
+                    -skip tests -nomake tests -skip examples -nomake examples \
+                    -I "${include_dir}" -L "${lib_dir}" QMAKE_LFLAGS="${LDFLAGS}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                #
+                post_command build
+                #
+                make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+            else
+                echo -e "${tn} ${urc} Please use a correct qt and build tool combination${tn}"
+                echo -e " ${urc} ${utick} qt5 + qmake ${utick} qt6 + cmake ${ucross} qt5 + cmake ${ucross} qt6 + qmake${tn}"
+                exit 1
+            fi
         else
-            echo "configuring ${app_name} ... "
-            ./configure -prefix "${qb_install_dir}" "${icu}" -opensource -confirm-license -release -openssl-linked -static -c++std ${standard} -qt-pcre -no-iconv -no-feature-glib -no-feature-opengl -no-feature-dbus -no-feature-gui -no-feature-widgets -no-feature-testlib -no-compile-examples -I "${include_dir}" -L "${lib_dir}" QMAKE_LFLAGS="${LDFLAGS}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-            echo
-            echo "compiling ${app_name} ... "
-            make -j"$(nproc)" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-            echo
-            echo "installing ${app_name} ... "
-            make install >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-            echo
+            if [[ "${qb_build_tool}" == 'cmake' && "${qt_version}" =~ ^(6\.[0-9]{1,2})$ ]]; then
+                cmake -Wno-dev -Wno-deprecated -G Ninja -B build \
+                    -D CMAKE_BUILD_TYPE="release" \
+                    -D QT_FEATURE_optimize_full=on -D QT_FEATURE_static=on -D QT_FEATURE_shared=off \
+                    -D QT_FEATURE_gui=off -D QT_FEATURE_openssl_linked=on \
+                    -D QT_FEATURE_dbus=off -D QT_FEATURE_pcre2=on -D QT_FEATURE_widgets=off \
+                    -D QT_FEATURE_testlib=off -D QT_BUILD_EXAMPLES=off -D QT_BUILD_TESTS=off \
+                    -D CMAKE_CXX_STANDARD="${standard}" \
+                    -D CMAKE_PREFIX_PATH="${qb_install_dir}" \
+                    -D CMAKE_CXX_FLAGS="${CXXFLAGS}" \
+                    -D BUILD_SHARED_LIBS=OFF \
+                    -D CMAKE_CXX_STANDARD_LIBRARIES="${lib_dir}/libexecinfo.a" \
+                    -D CMAKE_SKIP_RPATH=on -D CMAKE_SKIP_INSTALL_RPATH=on \
+                    -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                cmake --build build >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                #
+                post_command build
+                #
+                cmake --install build >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                #
+            elif [[ "${qt_version}" =~ ^(5\.[0-9]{1,2})$ ]]; then
+                if [[ "${qb_skip_icu}" = 'no' ]]; then
+                    icu=("-icu" "-no-iconv" "QMAKE_CXXFLAGS=-w")
+                else
+                    icu=("-no-icu" "-iconv" "QMAKE_CXXFLAGS=-w -fpermissive")
+                fi
+                #
+                # If Alpine, add the QMAKE_LIBS_EXECINFO path so we can build qtbase with no errors whilst linking against libexecinfo
+                [[ "${DISTRO}" =~ ^(alpine)$ ]] && echo "QMAKE_LIBS_EXECINFO     = ${lib_dir}/libexecinfo.a" >> "${qb_install_dir}/${app_name}/mkspecs/common/linux.conf"
+                #
+                # Don't strip by default by disabling these options. We will set it as off by default and use it with a switch
+                echo "CONFIG                 += ${qb_strip_qmake:-nostrip}" >> "${qb_install_dir}/qtbase/mkspecs/common/linux.conf"
+                #
+                echo "configuring ${app_name} ... "
+                ./configure -prefix "${qb_install_dir}" "${icu[@]}" -opensource -confirm-license -release \
+                    -openssl-linked -static -c++std "${standard}" -qt-pcre \
+                    -no-feature-glib -no-feature-opengl -no-feature-dbus -no-feature-gui -no-feature-widgets -no-feature-testlib -no-compile-examples \
+                    -skip tests -nomake tests -skip examples -nomake examples \
+                    -I "${include_dir}" -L "${lib_dir}" QMAKE_LFLAGS="${LDFLAGS}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                echo "compiling ${app_name} ... "
+                make -j"$(nproc)" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                #
+                post_command build
+                #
+                echo "installing ${app_name} ... "
+                make install >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+            else
+                echo -e "${tn} ${urc} Please use a correct qt and build tool combination${tn}"
+                echo -e " ${urc} ${utick} qt5 + qmake ${utick} qt6 + cmake ${ucross} qt5 + cmake ${ucross} qt6 + qmake${tn}"
+                exit 1
+            fi
         fi
+        #
+        _fix_static_links "${app_name}"
         #
         delete_function "${app_name}"
     else
@@ -1189,26 +1492,78 @@ function _build() {
         download_folder "${app_name}" "${!app_github_url}"
         if [[ "${info_verbose}" = 'yes' ]]; then
             #
-            "${qb_install_dir}/bin/qmake" -set prefix "${qb_install_dir}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+            if [[ "${qb_build_tool}" == 'cmake' && "${qt_version}" =~ ^(6\.[0-9])$ ]]; then
+                cmake -Wno-dev -Wno-deprecated -G Ninja -B build \
+                    -D CMAKE_BUILD_TYPE="release" \
+                    -D CMAKE_CXX_STANDARD="${standard}" \
+                    -D CMAKE_PREFIX_PATH="${qb_install_dir}" \
+                    -D CMAKE_CXX_FLAGS="${CXXFLAGS}" \
+                    -D BUILD_SHARED_LIBS=OFF \
+                    -D CMAKE_CXX_STANDARD_LIBRARIES="${lib_dir}/libexecinfo.a" \
+                    -D CMAKE_SKIP_RPATH=on -D CMAKE_SKIP_INSTALL_RPATH=on \
+                    -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                cmake --build build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                #
+                post_command build
+                #
+                cmake --install build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+            elif [[ "${qt_version}" =~ ^(5\.[0-9]{1,2})$ ]]; then
+                "${qb_install_dir}/bin/qmake" -set prefix "${qb_install_dir}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                #
+                "${qb_install_dir}/bin/qmake" QMAKE_CXXFLAGS="-static" QMAKE_LFLAGS="-static" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                #
+                post_command build
+                #
+                make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+            else
+                echo -e "${tn} ${urc} Please use a correct qt and build tool combination${tn}"
+                echo -e " ${urc} ${utick} qt5 + qmake ${utick} qt6 + cmake ${ucross} qt5 + cmake ${ucross} qt6 + qmake"
+                exit 1
+            fi
             #
-            "${qb_install_dir}/bin/qmake" QMAKE_CXXFLAGS="-static" QMAKE_LFLAGS="-static" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
-            make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
-            make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
         else
             #
-            echo "configuring ${app_name} path ... "
-            "${qb_install_dir}/bin/qmake" -set prefix "${qb_install_dir}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+            if [[ "${qb_build_tool}" == 'cmake' && "${qt_version}" =~ ^(6\.[0-9])$ ]]; then
+                echo "configuring ${app_name} path ... "
+                cmake -Wno-dev -Wno-deprecated -G Ninja -B build \
+                    -D CMAKE_BUILD_TYPE="release" \
+                    -D CMAKE_CXX_STANDARD="${standard}" \
+                    -D CMAKE_PREFIX_PATH="${qb_install_dir}" \
+                    -D CMAKE_CXX_FLAGS="${CXXFLAGS}" \
+                    -D BUILD_SHARED_LIBS=OFF \
+                    -D CMAKE_CXX_STANDARD_LIBRARIES="${lib_dir}/libexecinfo.a" \
+                    -D CMAKE_SKIP_RPATH=on -D CMAKE_SKIP_INSTALL_RPATH=on \
+                    -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" 2>&1 & spinner $!
             echo
-            echo "configuring ${app_name} ... "
-            "${qb_install_dir}/bin/qmake" QMAKE_CXXFLAGS="-static" QMAKE_LFLAGS="-static" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-            echo
-            echo "compiling ${app_name} ... "
-            make -j"$(nproc)" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-            echo
-            echo "installing ${app_name} ... "
-            make install >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-            echo
+                echo "compiling ${app_name} ... "
+                cmake --build build 2>&1 & spinner $!
+                #
+                post_command build
+                #
+                echo "installing ${app_name} ... "
+                cmake --install build 2>&1 & spinner $!
+            elif [[ "${qt_version}" =~ ^(5\.[0-9]{1,2})$ ]]; then
+                "${qb_install_dir}/bin/qmake" -set prefix "${qb_install_dir}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                #
+                echo "configuring ${app_name} path ... "
+                "${qb_install_dir}/bin/qmake" QMAKE_CXXFLAGS="-static" QMAKE_LFLAGS="-static" 2>&1 & spinner $!
+                echo "compiling ${app_name} ... "
+                make -j"$(nproc)" 2>&1 & spinner $!
+                #
+                post_command build
+                #
+                echo "installing ${app_name} ... "
+                make install 2>&1 & spinner $!
+            else
+                echo -e "${tn} ${urc} Please use a correct qt and build tool combination${tn}"
+                echo -e " ${urc} ${utick} qt5 + qmake ${utick} qt6 + cmake ${ucross} qt5 + cmake ${ucross} qt6 + qmake"
+                exit 1
+            fi
+            #
         fi
+        #
+        _fix_static_links "${app_name}"
         #
         delete_function "${app_name}"
     else
@@ -1236,27 +1591,92 @@ function _build() {
             else
                 libtorrent_libs="-L${lib_dir} -l:libtorrent.a"
             fi
-            #
-            export PKG_CONFIG_PATH="${lib_dir}/pkgconfig/"
+            if [[ "${DISTRO}" =~ ^(alpine)$ ]]; then
+                libexecinfo="${lib_dir}/libexecinfo.a"
+            fi
             if [[ "${info_verbose}" = 'yes' ]]; then
-                ./bootstrap.sh |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
-                ./configure --prefix="${qb_install_dir}" "${qb_debug}" --disable-gui --with-boost="${qb_install_dir}/boost" --with-boost-libdir="${lib_dir}" openssl_CFLAGS="${include_dir}" openssl_LIBS="${lib_dir}" CXXFLAGS="${CXXFLAGS} -I${qb_install_dir}/boost" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS} -l:libboost_system.a" openssl_CFLAGS="-I${include_dir}" openssl_LIBS="-L${lib_dir} -l:libcrypto.a -l:libssl.a" libtorrent_CFLAGS="-I${include_dir}" libtorrent_LIBS="${libtorrent_libs}" zlib_CFLAGS="-I${include_dir}" zlib_LIBS="-L${lib_dir} -l:libz.a" QT_QMAKE="${qb_install_dir}/bin" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
-                #
-                make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
-                make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                if [[ "${qb_build_tool}" == 'cmake' ]]; then
+                    cmake -Wno-dev -Wno-deprecated -G Ninja -B build \
+                        -D CMAKE_BUILD_TYPE="release" \
+                        -D CMAKE_CXX_STANDARD="${standard}" \
+                        -D CMAKE_PREFIX_PATH="${qb_install_dir};${qb_install_dir}/boost" \
+                        -D Boost_NO_BOOST_CMAKE=TRUE \
+                        -D CMAKE_CXX_FLAGS="${CXXFLAGS} -I${include_dir}" \
+                        -D Iconv_LIBRARY="${lib_dir}/libiconv.a" \
+                        -D CMAKE_CXX_STANDARD_LIBRARIES="${libexecinfo}" \
+                        -D GUI=OFF \
+                        -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    cmake --build build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    #
+                    post_command build
+                    #
+                    cmake --install build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    #
+                else
+                    #
+                    export PKG_CONFIG_PATH="${lib_dir}/pkgconfig/"
+                    #
+                    ./bootstrap.sh |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                    ./configure \
+                        QT_QMAKE="${qb_install_dir}/bin" \
+                        --prefix="${qb_install_dir}" \
+                        "${qb_debug}" \
+                        --disable-gui \
+                        CXXFLAGS="${CXXFLAGS} -I${qb_install_dir}/boost" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" \
+                        openssl_CFLAGS="${include_dir}" openssl_LIBS="${lib_dir}" openssl_CFLAGS="-I${include_dir}" openssl_LIBS="-L${lib_dir} -l:libcrypto.a -l:libssl.a" \
+                        libtorrent_CFLAGS="-I${include_dir}" libtorrent_LIBS="${libtorrent_libs}" \
+                        zlib_CFLAGS="-I${include_dir}" zlib_LIBS="-L${lib_dir} -l:libz.a" QT_QMAKE="${qb_install_dir}/bin" \
+                        --with-boost="${qb_install_dir}/boost" --with-boost-libdir="${lib_dir}" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    make -j"$(nproc)" |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                    #
+                    post_command build
+                    #
+                    make install |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
+                fi
             else
-                echo "initialing ${app_name} ... "
-                ./bootstrap.sh >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-                echo
-                echo "configuring ${app_name} ... "
-                ./configure --prefix="${qb_install_dir}" "${qb_debug}" --disable-gui --with-boost="${qb_install_dir}/boost" --with-boost-libdir="${lib_dir}" openssl_CFLAGS="${include_dir}" openssl_LIBS="${lib_dir}" CXXFLAGS="${CXXFLAGS} -I${qb_install_dir}/boost" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS} -l:libboost_system.a" openssl_CFLAGS="-I${include_dir}" openssl_LIBS="-L${lib_dir} -l:libcrypto.a -l:libssl.a" libtorrent_CFLAGS="-I${include_dir}" libtorrent_LIBS="${libtorrent_libs}" zlib_CFLAGS="-I${include_dir}" zlib_LIBS="-L${lib_dir} -l:libz.a" QT_QMAKE="${qb_install_dir}/bin" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-                echo
-                echo "compiling ${app_name} ... "
-                make -j"$(nproc)" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-                echo
-                echo "installing ${app_name} ... "
-                make install >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
-                echo
+                if [[ "${qb_build_tool}" == 'cmake' ]]; then
+                    echo "configuring ${app_name} ... "
+                    cmake -Wno-dev -Wno-deprecated  -G Ninja -B build \
+                        -D CMAKE_BUILD_TYPE="release" \
+                        -D CMAKE_CXX_STANDARD="${standard}" \
+                        -D CMAKE_PREFIX_PATH="${qb_install_dir};${qb_install_dir}/boost" \
+                        -D Boost_NO_BOOST_CMAKE=TRUE \
+                        -D CMAKE_CXX_FLAGS="${CXXFLAGS} -I${include_dir}" \
+                        -D Iconv_LIBRARY="${lib_dir}/libiconv.a" \
+                        -D CMAKE_CXX_STANDARD_LIBRARIES="${libexecinfo}" \
+                        -D GUI=OFF \
+                        -D CMAKE_INSTALL_PREFIX="${qb_install_dir}" 2>&1 & spinner $!
+                    cmake --build build 2>&1 & spinner $!
+                    #
+                    post_command build
+                    #
+                    cmake --install build 2>&1 & spinner $!
+                    #
+                else
+                    #
+                    export PKG_CONFIG_PATH="${lib_dir}/pkgconfig/"
+                    #
+                    echo "initialing ${app_name} ... "
+                    ./bootstrap.sh |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                    echo "configuring ${app_name} ... "
+                    ./configure \
+                        QT_QMAKE="${qb_install_dir}/bin" \
+                        --prefix="${qb_install_dir}" \
+                        "${qb_debug}" \
+                        --disable-gui \
+                        CXXFLAGS="${CXXFLAGS} -I${qb_install_dir}/boost" CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}" \
+                        openssl_CFLAGS="${include_dir}" openssl_LIBS="${lib_dir}" openssl_CFLAGS="-I${include_dir}" openssl_LIBS="-L${lib_dir} -l:libcrypto.a -l:libssl.a" \
+                        libtorrent_CFLAGS="-I${include_dir}" libtorrent_LIBS="${libtorrent_libs}" \
+                        zlib_CFLAGS="-I${include_dir}" zlib_LIBS="-L${lib_dir} -l:libz.a" QT_QMAKE="${qb_install_dir}/bin" \
+                        --with-boost="${qb_install_dir}/boost" --with-boost-libdir="${lib_dir}" 2>&1 & spinner $!
+                    echo "compiling ${app_name} ... "
+                    make -j"$(nproc)" 2>&1 & spinner $!
+                    #
+                    post_command build
+                    #
+                    echo "installing ${app_name} ... "
+                    make install 2>&1 & spinner $!
+                fi
             fi
             #
             [[ -f "${qb_install_dir}/bin/qbittorrent-nox" ]] && cp -f "${qb_install_dir}/bin/qbittorrent-nox" "${qb_install_dir}/completed/qbittorrent-nox" && echo -e "${cg}✓ qbittorrent-nox successfully built${cend}"
@@ -1450,10 +1870,10 @@ echo
 #################################################################################
 # OPT GENERATOR
 #################################################################################
-if ! ARGS=$(getopt -a -o bdnimhvpo -l boot-strap,debug,no-delete,icu,master,\
+if ! ARGS=$(getopt -a -o bdnimhvpos -l boot-strap,cmake,with-cmake,debug,no-delete,icu,master,\
 help,help-all,full-help,verbose,c-std:,lm,libtorrent-master,lt:,libtorrent-tag:,\
 qm,qbittorrent-master,qt:,qbittorrent-tag:,build-directory:,proxy:,optimize,\
-pr:,patch-repo:,skip-bison,skip-gawk,skip-glibc,skip-zlib,\
+pr:,qt-version:,patch-repo:,strip,skip-bison,skip-gawk,skip-glibc,skip-zlib,\
 skip-icu,skip-openssl,skip-qtbase,skip-qttools  -- "$@")
 then
     _usage
@@ -1478,6 +1898,9 @@ while true; do
         apply_patches bootstrap
         _apply_patches
         exit 0
+        ;;
+    --cmake | --with-cmake)
+        qb_build_tool="cmake"
         ;;
     -d | --debug)
         lt_debug="debug-symbols=on"
@@ -1526,8 +1949,18 @@ while true; do
         patch_repo="${2}"
         shift
         ;;
+    --qt-version)
+        qt_version_check='yes'
+        qt_version="$2"
+        shift
+        ;;
     --c-std)
-        cstandard="$2"
+        standard="$2"
+        shift
+        ;;
+    -s | --strip)
+        qb_strip_qmake='strip'
+        qb_strip_flags='-s'
         shift
         ;;
     --skip-bison)
@@ -1603,4 +2036,5 @@ check_dependencies
 #####################################################################################################################################################
 check_modules
 installation_modules "${@}" # see functions
+_cmake
 _build "${@}"
