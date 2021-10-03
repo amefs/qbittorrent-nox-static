@@ -233,7 +233,14 @@ set_default_values() {
 		[[ "${qb_skip_icu}" != 'no' ]] && delete+=("icu")
 	fi
 	#
-    arch="$(uname -m)"
+    if [[ "$(uname -m)" =~ ^(armv7l)$ ]]; then
+        arch="armv7"
+    elif [[ "$(uname -m)" =~ ^(aarch64)$ ]]; then
+        arch="aarch64"
+    elif [[ "$(uname -m)" =~ ^(x86_64)$ ]]; then
+        arch="x86_64"
+    fi
+    
     #
     qb_working_dir="$(printf "%s" "$(pwd <(dirname "${0}"))")" # Get the full path to the scripts location to use with setting some path related variables.
     qb_working_dir_short="${qb_working_dir/$HOME/\~}"          # echo the working dir but replace the $HOME path with ~
