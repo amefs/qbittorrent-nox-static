@@ -577,7 +577,7 @@ installation_modules() {
         python_short_version="${python_major}.${python_minor}"
         python_link_version="${python_major}${python_minor}"
         #
-        echo -e "using gcc : : : <cflags>${optimize/*/$optimize }-std=${standard} <cxxflags>${optimize/*/$optimize }-std=${standard} ;${tn}using python : ${python_short_version} : /usr/bin/python${python_short_version} : /usr/include/python${python_short_version} : /usr/lib/python${python_short_version} ;" > "$HOME/user-config.jam"
+        echo -e "using gcc : : : <cflags>${optimize/*/$optimize }-std=${cxx_standard} <cxxflags>${optimize/*/$optimize }-std=${cxx_standard} ;${tn}using python : ${python_short_version} : /usr/bin/python${python_short_version} : /usr/include/python${python_short_version} : /usr/lib/python${python_short_version} ;" > "$HOME/user-config.jam"
         #
         ## Echo the build directory.
         echo -e "${tn}${tb}Install Prefix${cend} : ${clc}${qb_install_dir_short}${cend}"
@@ -1330,7 +1330,12 @@ fi
                     cmake --install build |& tee -a "${qb_install_dir}/logs/${app_name}.log.txt"
                     #
                 else
-                    "${qb_install_dir}/boost/b2" -j"$(nproc)" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd="${standard}" dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
+                    if [[ "${libtorrent_github_tag}" =~ ^(RC_2|v2\.0\..*) ]]; then
+                        lt_version_options=""
+                    else
+                        lt_version_options="iconv=on"
+                    fi
+                    "${qb_install_dir}/boost/b2" -j"$(nproc)" "${lt_version_options}" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd="${standard}" dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" |& tee "${qb_install_dir}/logs/${app_name}.log.txt"
                     #
                     post_command build
                     #
@@ -1356,7 +1361,12 @@ fi
                     #
                 else
                     echo "configuring ${app_name} ... "
-                    "${qb_install_dir}/boost/b2" -j"$(nproc)" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd="${standard}" dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
+                    if [[ "${libtorrent_github_tag}" =~ ^(RC_2|v2\.0\..*) ]]; then
+                        lt_version_options=""
+                    else
+                        lt_version_options="iconv=on"
+                    fi
+                    "${qb_install_dir}/boost/b2" -j"$(nproc)" "${lt_version_options}" address-model="$(getconf LONG_BIT)" "${lt_debug}" optimization=speed cxxstd="${standard}" dht=on encryption=on crypto=openssl i2p=on extensions=on variant=release threading=multi link=static boost-link=static cxxflags="${CXXFLAGS}" cflags="${CPPFLAGS}" linkflags="${LDFLAGS}" install --prefix="${qb_install_dir}" >> "${qb_install_dir}/logs/${app_name}.log.txt" 2>&1 & spinner $!
                     #
                     echo "compiling ${app_name} ... "
                     post_command build
@@ -1592,11 +1602,11 @@ fi
             apply_patches "${app_name}"
             #
             if [[ "${libtorrent_github_tag}" =~ ^(RC_2|v2) ]]; then
-                libtorrent_libs="-L${lib_dir} -l:libtorrent-rasterbar.a -l:libtry_signal.a"
+                libtorrent_libs="-L${lib_dir} -l:libtorrent-rasterbar.a -l:libtry_signal.a -l:libiconv.a"
             elif [[ "${libtorrent_github_tag}" =~ ^(RC_1_2|v1.2) ]]; then
-                libtorrent_libs="-L${lib_dir} -l:libtorrent-rasterbar.a"
+                libtorrent_libs="-L${lib_dir} -l:libtorrent-rasterbar.a -l:libiconv.a"
             else
-                libtorrent_libs="-L${lib_dir} -l:libtorrent.a"
+                libtorrent_libs="-L${lib_dir} -l:libtorrent.a -l:libiconv.a"
             fi
             if [[ "${DISTRO}" =~ ^(alpine)$ ]]; then
                 libexecinfo="${lib_dir}/libexecinfo.a"
